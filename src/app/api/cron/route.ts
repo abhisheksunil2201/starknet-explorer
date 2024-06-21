@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { verifySignatureAppRouter } from "@upstash/qstash/nextjs";
 import { db } from "~/server/db";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
-import axios, { AxiosResponse } from "axios";
+import axios from "axios";
+import type { AxiosResponse } from "axios";
 import { env } from "~/env";
 
 interface ILatestBlockResponse extends AxiosResponse {
@@ -74,13 +75,15 @@ async function handler() {
                   },
                 },
               );
-            console.log(transactionData);
 
             if (transactionStatus == 200) {
               for (const j of transactionData.result.transactions) {
                 try {
-                  await db.transaction.create({
-                    data: {
+                  await db.transaction.upsert({
+                    where: {
+                      hash: j.transaction_hash,
+                    },
+                    create: {
                       status: transactionData.result.status,
                       hash: j.transaction_hash,
                       type: j.type,
@@ -94,6 +97,7 @@ async function handler() {
                       l1_gas_price:
                         transactionData.result.l1_gas_price.price_in_wei,
                     },
+                    update: {},
                   });
                 } catch (err) {
                   console.log("Failed to fetch transaction data", err);

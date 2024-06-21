@@ -9,6 +9,8 @@ export const transactionRouter = createTRPCRouter({
   paginateTransactions: publicProcedure
     .input(z.object({ skip: z.number() }))
     .mutation(async ({ input, ctx }) => {
+      console.log(input);
+
       return await ctx.db.transaction.findMany({
         orderBy: [
           {
@@ -17,20 +19,6 @@ export const transactionRouter = createTRPCRouter({
         ],
         skip: input.skip,
         take: 25,
-      });
-    }),
-
-  CustomPaginateTransactions: publicProcedure
-    .input(z.object({ skip: z.number(), take: z.number().optional() }))
-    .mutation(async ({ input, ctx }) => {
-      return await ctx.db.transaction.findMany({
-        orderBy: [
-          {
-            age: "desc",
-          },
-        ],
-        skip: input.skip,
-        take: input.take,
       });
     }),
 

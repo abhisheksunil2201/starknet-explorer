@@ -1,8 +1,55 @@
-import { api } from "~/trpc/server";
+"use client";
 
-export default async function Home() {
-  const transactionData = api.transaction.getTransactions();
-  console.log("here", transactionData);
+import type { Transaction } from "@prisma/client";
+import { useEffect, useState } from "react";
+import { api } from "~/trpc/react";
+import TransactionTable from "~/components/TransactionTable";
+import MaxWidthWrapper from "~/components/MaxWidthWrapper";
 
-  return <h1>Hello</h1>;
+export default function Home() {
+  const [items, setItems] = useState(0);
+  const [txData, setTxData] = useState<Transaction[] | undefined>([]);
+  const [filterState, setFilterState] = useState<string>("ALL");
+
+  const TxPagination = api.transaction.paginateTransactions.useMutation({
+    onSuccess: (res) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+      setTxData((prevData) => [...(prevData ?? []), ...res]);
+    },
+  });
+
+  const fetchPaginatedTransactions = async () => {
+    console.log(items);
+
+    TxPagination.mutate({ skip: items + 25 });
+    setItems((items) => items + 25);
+  };
+
+  const fetchTransactions = async () => {
+    TxPagination.mutate({ skip: items });
+  };
+
+  useEffect(() => {
+    fetchTransactions().catch((err) => {
+      console.log(err);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const txDataRendered = (
+    <TransactionTable
+      data={txData}
+      filterState={filterState}
+      setFilterState={setFilterState}
+      fetchTransactions={fetchPaginatedTransactions}
+    />
+  );
+
+  return (
+    <>
+      <MaxWidthWrapper className="mb-12 mt-28 flex flex-col items-center justify-center text-center sm:mt-40">
+        {txDataRendered}
+      </MaxWidthWrapper>
+    </>
+  );
 }

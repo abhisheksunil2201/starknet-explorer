@@ -36,19 +36,15 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const txDataRendered = (
-    <TransactionTable
-      data={txData}
-      filterState={filterState}
-      setFilterState={setFilterState}
-      fetchTransactions={fetchPaginatedTransactions}
-    />
-  );
-
   return (
     <>
       <MaxWidthWrapper className="mb-12 mt-28 flex flex-col items-center justify-center text-center sm:mt-40">
-        {txDataRendered}
+        <TransactionTable
+          data={txData}
+          filterState={filterState}
+          setFilterState={setFilterState}
+          fetchTransactions={fetchPaginatedTransactions}
+        />
       </MaxWidthWrapper>
     </>
   );

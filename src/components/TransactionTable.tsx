@@ -32,7 +32,6 @@ import { useCopyToClipboard } from "@uidotdev/usehooks";
 import Badge from "./Badge";
 import Link from "next/link";
 import Filter from "./Filter";
-import TableSkeleton from "./TableSkeleton";
 import { tableColumns } from "~/consts";
 
 interface TransactionTableProps {
@@ -160,7 +159,6 @@ export default function TransactionTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filteredData?.length === 0 && <TableSkeleton />}
           {filteredData && filteredData?.length !== 0
             ? filteredData.map((tx) => (
                 <TableRow

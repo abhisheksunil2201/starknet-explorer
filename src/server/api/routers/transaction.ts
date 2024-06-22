@@ -9,8 +9,6 @@ export const transactionRouter = createTRPCRouter({
   paginateTransactions: publicProcedure
     .input(z.object({ skip: z.number() }))
     .mutation(async ({ input, ctx }) => {
-      console.log(input);
-
       return await ctx.db.transaction.findMany({
         orderBy: [
           {
@@ -25,18 +23,18 @@ export const transactionRouter = createTRPCRouter({
   getTransactionByHash: publicProcedure
     .input(
       z.object({
-        Tx_hash: z.string(),
+        hash: z.string(),
       }),
     )
     .query(async ({ ctx, input }) => {
-      if (input.Tx_hash !== undefined) {
-        const TxData = await ctx.db.transaction.findUnique({
+      if (input.hash !== undefined) {
+        const data = await ctx.db.transaction.findUnique({
           where: {
-            hash: input.Tx_hash,
+            hash: input.hash,
           },
         });
 
-        return TxData;
+        return data;
       }
     }),
 });

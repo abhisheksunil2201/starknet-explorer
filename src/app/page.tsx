@@ -11,22 +11,21 @@ export default function Home() {
   const [txData, setTxData] = useState<Transaction[] | undefined>([]);
   const [filterState, setFilterState] = useState<string>("ALL");
 
-  const TxPagination = api.transaction.paginateTransactions.useMutation({
-    onSuccess: (res) => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-      setTxData((prevData) => [...(prevData ?? []), ...res]);
-    },
-  });
+  const getPaginatedTransaction =
+    api.transaction.paginateTransactions.useMutation({
+      onSuccess: (res) => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+        setTxData((prevData) => [...(prevData ?? []), ...res]);
+      },
+    });
 
   const fetchPaginatedTransactions = async () => {
-    console.log(items);
-
-    TxPagination.mutate({ skip: items + 25 });
+    getPaginatedTransaction.mutate({ skip: items + 25 });
     setItems((items) => items + 25);
   };
 
   const fetchTransactions = async () => {
-    TxPagination.mutate({ skip: items });
+    getPaginatedTransaction.mutate({ skip: items });
   };
 
   useEffect(() => {

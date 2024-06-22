@@ -5,31 +5,10 @@ import { db } from "~/server/db";
 import axios from "axios";
 import type { AxiosResponse } from "axios";
 import { env } from "~/env";
+import type { ITransactionsResponse } from "~/server/types";
 
 interface ILatestBlockResponse extends AxiosResponse {
   result: number;
-}
-
-interface ITransactionsResponse extends AxiosResponse {
-  result: {
-    block_number: number;
-    timestamp: number;
-    status: string;
-    transactions: [
-      {
-        max_fee: string;
-        sender_address: string;
-        nonce: string;
-        version: string;
-        transaction_hash: string;
-        type: string;
-        signature: [];
-      },
-    ];
-    l1_gas_price: {
-      price_in_wei: string;
-    };
-  };
 }
 
 async function handler() {

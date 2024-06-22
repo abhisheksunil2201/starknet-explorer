@@ -21,6 +21,6 @@ model Transaction {
     sender_address  String
     nonce String
     version String
-    signature Json
+    signature  String[]
     l1_gas_price String
 }

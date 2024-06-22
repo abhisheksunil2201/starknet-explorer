@@ -149,7 +149,7 @@ const TransactionTable = ({
         </p>
         <Filter filterState={filterState} setFilterState={setFilterState} />
       </div>
-      <Table className="h-screen overflow-scroll">
+      <Table className="h-screen">
         <TableHeader>
           <TableRow className="h-2.5 border-[#4B4B4B] hover:bg-white/25">
             {tableColumns.map((col) => (
@@ -160,6 +160,13 @@ const TransactionTable = ({
           </TableRow>
         </TableHeader>
         <TableBody>
+          {filteredData?.length === 0 && (
+            <TableRow className="hover:bg-transarent h-2.5 border-[#4B4B4B]">
+              <TableCell align="center" colSpan={tableColumns.length}>
+                <p className="text-sm text-[#AAAAAA]">No transactions found</p>
+              </TableCell>
+            </TableRow>
+          )}
           {filteredData && filteredData?.length !== 0
             ? filteredData.map((tx) => (
                 <TableRow
@@ -193,7 +200,7 @@ const TransactionTable = ({
                       <Tooltip delayDuration={0}>
                         <TooltipTrigger>
                           <Link
-                            href={`/tx/${tx.hash}`}
+                            href={`/tx/${tx.hash}?age=${tx.age}`}
                             className="flex w-24 text-[#8BA3DF]"
                           >
                             {shortenHash(tx.hash)}

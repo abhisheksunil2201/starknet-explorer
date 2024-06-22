@@ -1,19 +1,16 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import type {
-  ITransactionReceipt,
-  ITransactionsResponse,
-} from "~/server/types";
+import type { ITransactionHash, ITransactionReceipt } from "~/server/types";
 import { useCopyToClipboard } from "@uidotdev/usehooks";
 import { api } from "~/trpc/react";
-import { env } from "~/env";
 import axios from "axios";
 import MaxWidthWrapper from "~/components/MaxWidthWrapper";
 import Label from "~/components/Label";
 import { CircleHelp, Copy } from "lucide-react";
 import Badge from "~/components/Badge";
 import {
+  cn,
   convertAge,
   formatDate,
   formatTime,
@@ -23,14 +20,27 @@ import {
 } from "~/lib/utils";
 import StatusTimeline from "~/components/StatusTimeline";
 import Row from "~/components/Row";
+import { callDataTabs } from "~/consts";
+import { getTransactionByHash, getTransactionReceipt } from "~/requests";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/components/ui/table";
 
 const Transaction = () => {
   const params = useParams<{ id: string }>();
   const [transactionReceipt, setTransactionReceipt] =
     useState<ITransactionReceipt["result"]>();
+  const [transactionByHash, setTransactionByHash] =
+    useState<ITransactionHash>();
   const searchParams = useSearchParams();
   const [pageStatus, setPageStatus] = useState<boolean>(true);
-  const [clipboardText, copyToClipboard] = useCopyToClipboard();
+  const [callDataTab, setCallDataTab] = useState<string>("Hex");
+  const [, copyToClipboard] = useCopyToClipboard();
 
   const { id } = params;
   const age = searchParams.get("age");
@@ -43,29 +53,6 @@ const Transaction = () => {
     api.transaction.getTransactionByHash.useQuery({
       hash: id,
     });
-
-  const getTransactionReceipt = async () => {
-    try {
-      const { data, status } = await axios.post<ITransactionReceipt>(
-        "https://starknet-mainnet.blastapi.io/e39b721f-f93b-4219-8b91-e14fb019af9b",
-        {
-          jsonrpc: "2.0",
-          method: "starknet_getTransactionReceipt",
-          params: [id],
-          id: 1,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        },
-      );
-
-      if (status === 200) setTransactionReceipt(data?.result);
-    } catch (error) {
-      console.log(error);
-    }
-  };
 
   const calculate_gas = () => {
     if (transactionReceipt && getTransactionByHashQuery.isFetched) {
@@ -98,7 +85,13 @@ const Transaction = () => {
   // }
 
   useEffect(() => {
-    getTransactionReceipt().catch((err) => console.log(err));
+    getTransactionReceipt({ id, setTransactionReceipt }).catch((err) =>
+      console.log(err),
+    );
+    getTransactionByHash({ id, setTransactionByHash }).catch((err) =>
+      console.log(err),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -284,62 +277,96 @@ const Transaction = () => {
                 </div>
 
                 <div className="h-[431px] w-full bg-[#252525] p-4">
-                  <div className="mb-8 flex overflow-auto">
-                    <button className="inline-flex h-9 items-center justify-center whitespace-nowrap border border-r-0 border-[#4B4B4B] bg-[#1b1b1b] px-4 py-2 text-sm font-medium text-white ring-offset-background transition-colors hover:bg-[#383838] hover:bg-primary/90 focus-visible:outline-none  focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50">
-                      Hex
-                    </button>
+                  <div className="flex">
+                    <div className="mb-8 flex overflow-auto">
+                      {callDataTabs.map((tab, index) => (
+                        <button
+                          key={tab}
+                          className={cn([
+                            "inline-flex h-9 items-center justify-center whitespace-nowrap border border-r-0 border-[#4B4B4B] bg-[#1b1b1b] px-4 py-2 text-sm font-medium text-white ring-offset-background transition-colors hover:bg-[#383838] hover:bg-primary/90 focus-visible:outline-none  focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+                            index === callDataTabs.length - 1 && "border-r-1",
+                            callDataTab === tab && "bg-[#4B4B4B]",
+                          ])}
+                          onClick={() => setCallDataTab(tab)}
+                        >
+                          {tab}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="mb-8 ml-8 flex overflow-auto">
+                      {["Decoded", "Raw"].map((tab, index) => (
+                        <button
+                          key={tab}
+                          className={cn([
+                            "inline-flex h-9 items-center justify-center whitespace-nowrap border border-r-0 border-[#4B4B4B] bg-[#1b1b1b] px-4 py-2 text-sm font-medium text-white ring-offset-background transition-colors hover:bg-[#383838] hover:bg-primary/90 focus-visible:outline-none  focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+                            index === 1 && "border-r-1",
+                            "Raw" === tab && "bg-[#4B4B4B]",
+                          ])}
+                        >
+                          {tab}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   <div>
-                    <div className="h-[329px] overflow-x-auto overflow-y-auto border-[#383838] bg-[#1b1b1b]">
-                      <table className="table ">
-                        {/* head */}
-                        <thead className="">
-                          <tr className="border-[#383838]">
-                            <th className="py-7 font-medium">INPUT</th>
-                            <th className="py-7 font-medium">VALUE</th>
-                            <th></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {/* row 1 */}
-                          <tr className="hover border-[#383838]">
-                            <th className="py-7">1</th>
-                            <td>Cy Ganderton</td>
-                            <td>copy</td>
-                          </tr>
-                          {/* row 2 */}
-                          <tr className="hover border-[#383838]">
-                            <th className="py-7 ">2</th>
-                            <td>Hart Hagerty</td>
-                            <td>copy</td>
-                          </tr>
-                          {/* row 3 */}
-                          <tr className="hover border-[#383838]">
-                            <th className="py-7 ">3</th>
-                            <td>Brice Swyre</td>
-                            <td>copy</td>
-                          </tr>
-                          {/* row 4 */}
-                          <tr className="hover border-[#383838]">
-                            <th className="py-7 ">3</th>
-                            <td>Brice Swyre</td>
-                            <td>copy</td>
-                          </tr>
-                        </tbody>
-                      </table>
+                    <div className="no-scrollbar h-[329px] w-full overflow-x-auto overflow-y-auto border-[#383838] bg-[#1b1b1b]">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="h-2.5 border-[#4B4B4B] hover:bg-white/25">
+                            <TableHead className="text-xs uppercase text-[#AAAAAA]">
+                              input
+                            </TableHead>
+                            <TableHead className="text-xs uppercase text-[#AAAAAA]">
+                              value
+                            </TableHead>
+                            <TableHead className="text-xs uppercase text-[#AAAAAA]">
+                              {""}
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {transactionByHash?.result.calldata.map(
+                            (data, index) => (
+                              <TableRow
+                                key={index}
+                                className="h-2.5 border-[#4B4B4B] hover:bg-white/25"
+                              >
+                                <TableCell align="left" width={100}>
+                                  {index}
+                                </TableCell>
+                                <TableCell align="left">{data}</TableCell>
+                                <TableCell align="left">
+                                  <Copy
+                                    cursor={"pointer"}
+                                    width={15}
+                                    height={15}
+                                    onClick={() => handleCopy(data)}
+                                  />
+                                </TableCell>
+                              </TableRow>
+                            ),
+                          )}
+                        </TableBody>
+                      </Table>
                     </div>
                   </div>
                 </div>
               </div>
               <Row label="SIGNATURE(S)">
-                {getTransactionByHashQuery.data?.signature?.map((signature) => (
-                  <div key={signature} className="h-full w-full">
-                    <div className="flex h-full w-full flex-row items-center border-t-[1px]  border-[#383838]">
-                      <p className="text-[14px] text-[#f5ab35]">{signature}</p>
-                    </div>
-                  </div>
-                ))}
+                <div className="flex w-full flex-col">
+                  {getTransactionByHashQuery.data?.signature?.map(
+                    (signature) => (
+                      <div key={signature}>
+                        <div className="flex flex-row items-center border-t-[1px] border-[#383838] py-2">
+                          <p className="text-[14px] text-[#f5ab35]">
+                            {signature}
+                          </p>
+                        </div>
+                      </div>
+                    ),
+                  )}
+                </div>
               </Row>
               &nbsp;
             </div>

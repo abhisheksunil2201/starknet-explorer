@@ -23,4 +23,5 @@ model Transaction {
     version String
     signature  String[]
     l1_gas_price String
+    calldata Json
 }

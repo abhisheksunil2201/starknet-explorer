@@ -14,6 +14,7 @@ export interface ITransactionsResponse extends AxiosResponse {
         transaction_hash: string;
         type: string;
         signature: [];
+        calldata: [];
       },
     ];
     l1_gas_price: {
@@ -37,5 +38,18 @@ export interface ITransactionReceipt {
       ec_op_builtin_applications: number;
       range_check_builtin_applications: number;
     };
+  };
+}
+
+export interface ITransactionHash {
+  result: {
+    transaction_hash: string;
+    type: string;
+    version: string;
+    nonce: string;
+    max_fee: string;
+    sender_address: string;
+    signature: string[];
+    calldata: string[];
   };
 }

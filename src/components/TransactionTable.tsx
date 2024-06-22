@@ -33,6 +33,7 @@ import Badge from "./Badge";
 import Link from "next/link";
 import Filter from "./Filter";
 import { tableColumns } from "~/consts";
+import dynamic from "next/dynamic";
 
 interface TransactionTableProps {
   data: Transaction[] | undefined;
@@ -47,12 +48,12 @@ const tooltipStyle: CSSProperties = {
   padding: "5px 20px",
 };
 
-export default function TransactionTable({
+const TransactionTable = ({
   data,
   filterState,
   setFilterState,
   fetchTransactions,
-}: TransactionTableProps) {
+}: TransactionTableProps) => {
   const [clipboardText, copyToClipboard] = useCopyToClipboard();
   const [showBadge, setShowBadge] = useState(false);
   const observerTarget = useRef(null);
@@ -251,8 +252,12 @@ export default function TransactionTable({
               ))
             : null}
         </TableBody>
-        <div ref={observerTarget}></div>
       </Table>
+      <div ref={observerTarget}></div>
     </div>
   );
-}
+};
+
+export default dynamic(() => Promise.resolve(TransactionTable), {
+  ssr: false,
+});

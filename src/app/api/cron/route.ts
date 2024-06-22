@@ -75,6 +75,7 @@ async function handler() {
                       version: j.version,
                       l1_gas_price:
                         transactionData.result.l1_gas_price.price_in_wei,
+                      calldata: [],
                     },
                     update: {},
                   });

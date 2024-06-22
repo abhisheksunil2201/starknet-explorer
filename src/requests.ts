@@ -17,7 +17,7 @@ export const getTransactionReceipt = async ({
         jsonrpc: "2.0",
         method: "starknet_getTransactionReceipt",
         params: [id],
-        id: 1,
+        id: 0,
       },
       {
         headers: {

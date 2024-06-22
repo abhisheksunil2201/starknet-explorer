@@ -4,7 +4,6 @@ import { useParams, useSearchParams } from "next/navigation";
 import type { ITransactionHash, ITransactionReceipt } from "~/server/types";
 import { useCopyToClipboard } from "@uidotdev/usehooks";
 import { api } from "~/trpc/react";
-import axios from "axios";
 import MaxWidthWrapper from "~/components/MaxWidthWrapper";
 import Label from "~/components/Label";
 import { CircleHelp, Copy } from "lucide-react";
@@ -20,7 +19,7 @@ import {
 } from "~/lib/utils";
 import StatusTimeline from "~/components/StatusTimeline";
 import Row from "~/components/Row";
-import { callDataTabs } from "~/consts";
+import { callDataTabs, tooltipStyle } from "~/consts";
 import { getTransactionByHash, getTransactionReceipt } from "~/requests";
 import {
   Table,
@@ -30,6 +29,14 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
+import Link from "next/link";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "~/components/ui/tooltip";
+import axios from "axios";
 
 const Transaction = () => {
   const params = useParams<{ id: string }>();
@@ -40,6 +47,7 @@ const Transaction = () => {
   const searchParams = useSearchParams();
   const [pageStatus, setPageStatus] = useState<boolean>(true);
   const [callDataTab, setCallDataTab] = useState<string>("Hex");
+  const [eth, setEth] = useState<number>(0);
   const [, copyToClipboard] = useCopyToClipboard();
 
   const { id } = params;
@@ -53,6 +61,17 @@ const Transaction = () => {
     api.transaction.getTransactionByHash.useQuery({
       hash: id,
     });
+
+  const getEthValue = async () => {
+    const res = await axios.get<{
+      ethereum: {
+        usd: number;
+      };
+    }>(
+      "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd",
+    );
+    setEth(res.data.ethereum.usd);
+  };
 
   const calculate_gas = () => {
     if (transactionReceipt && getTransactionByHashQuery.isFetched) {
@@ -73,16 +92,30 @@ const Transaction = () => {
     }
   };
 
-  // const handleCallData = (type: string) => {
-  //   switch (type) {
-  //     case 'hex':
-  //       return
-  //     case 'dec':
-  //       return
-  //     default:
-  //       return '
-  //   }
-  // }
+  const transformCallData = (value: string) => {
+    switch (callDataTab) {
+      case "Hex":
+        return value;
+      case "Dec":
+        if (value.startsWith("0x")) {
+          value = value.slice(2);
+        }
+        return parseInt(value, 16);
+      case "Text":
+        value = value.startsWith("0x") ? value.slice(2) : value;
+        if (value.length % 2 !== 0) {
+          value = "0" + value;
+        }
+        let text = "";
+        for (let i = 0; i < value.length; i += 2) {
+          const charCode = parseInt(value.substr(i, 2), 16);
+          text += String.fromCharCode(charCode);
+        }
+        return text;
+      default:
+        return value;
+    }
+  };
 
   useEffect(() => {
     getTransactionReceipt({ id, setTransactionReceipt }).catch((err) =>
@@ -91,6 +124,7 @@ const Transaction = () => {
     getTransactionByHash({ id, setTransactionByHash }).catch((err) =>
       console.log(err),
     );
+    getEthValue().catch((err) => console.log(err));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -151,7 +185,9 @@ const Transaction = () => {
             className={`flex flex-row  items-center space-x-2 pb-4 text-sm text-[#CACACA] hover:border-b-2 hover:border-[#a35d42] active:border-[#BF6D4C] ${pageStatus == false && "border-b-2 border-[#BF6D4C]"} `}
           >
             <p className="font-medium text-[#AAAAAA]"> Events</p>
-            <div className="rounded-xl bg-[#121212] px-2 py-1">0</div>
+            <div className="rounded-xl bg-[#121212] px-2 py-1">
+              {transactionReceipt?.events?.length ?? 0}
+            </div>
           </button>
         </div>
         {pageStatus == true ? (
@@ -172,7 +208,13 @@ const Transaction = () => {
               <Row label="actual fee">
                 <p className="text-[14px]">
                   {weiToEther(toDecimal(transactionReceipt?.actual_fee.amount))}{" "}
-                  ETH
+                  ETH ($
+                  {(
+                    weiToEther(
+                      toDecimal(transactionReceipt?.actual_fee.amount),
+                    )! * eth
+                  ).toFixed(6)}
+                  )
                 </p>
               </Row>
               <Row label="max fee">
@@ -191,9 +233,34 @@ const Transaction = () => {
               </Row>
               <Row label="sender address">
                 <p className="text-[14px]">
-                  {getTransactionByHashQuery.isFetched &&
-                    getTransactionByHashQuery.data?.sender_address}
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger>
+                        <Link href="" className="text-[#8BA3DF]">
+                          {getTransactionByHashQuery.isFetched &&
+                            getTransactionByHashQuery.data?.sender_address}
+                        </Link>
+                      </TooltipTrigger>
+                      <TooltipContent style={tooltipStyle}>
+                        <p>
+                          {getTransactionByHashQuery.isFetched &&
+                            getTransactionByHashQuery.data?.sender_address}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </p>
+                <Copy
+                  cursor={"pointer"}
+                  width={15}
+                  height={15}
+                  className="ml-2"
+                  onClick={() =>
+                    handleCopy(
+                      getTransactionByHashQuery.data?.sender_address ?? "",
+                    )
+                  }
+                />
               </Row>
             </div>
 
@@ -269,7 +336,7 @@ const Transaction = () => {
                   </div>
                 </div>
               </div>
-              {/* CallData */}
+              {/* calldata */}
               <div className="mb-8 flex h-fit max-h-fit flex-row py-2">
                 <div className="flex w-[250px] flex-row  space-x-2">
                   <CircleHelp width={17} height={17} />
@@ -283,7 +350,7 @@ const Transaction = () => {
                         <button
                           key={tab}
                           className={cn([
-                            "inline-flex h-9 items-center justify-center whitespace-nowrap border border-r-0 border-[#4B4B4B] bg-[#1b1b1b] px-4 py-2 text-sm font-medium text-white ring-offset-background transition-colors hover:bg-[#383838] hover:bg-primary/90 focus-visible:outline-none  focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+                            "inline-flex h-9 items-center justify-center whitespace-nowrap border border-r-0 border-[#4B4B4B] bg-[#1b1b1b] px-4 py-2 text-sm font-medium text-white ring-offset-background transition-colors hover:bg-[#555555] focus-visible:outline-none  focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
                             index === callDataTabs.length - 1 && "border-r-1",
                             callDataTab === tab && "bg-[#4B4B4B]",
                           ])}
@@ -333,15 +400,23 @@ const Transaction = () => {
                                 className="h-2.5 border-[#4B4B4B] hover:bg-white/25"
                               >
                                 <TableCell align="left" width={100}>
-                                  {index}
+                                  <p className="text-[14px] text-[#f5ab35]">
+                                    {index}
+                                  </p>
                                 </TableCell>
-                                <TableCell align="left">{data}</TableCell>
+                                <TableCell align="left" width={650}>
+                                  <p className="text-[#82F4BB]">
+                                    {`"${transformCallData(data)}"`}
+                                  </p>
+                                </TableCell>
                                 <TableCell align="left">
                                   <Copy
                                     cursor={"pointer"}
                                     width={15}
                                     height={15}
-                                    onClick={() => handleCopy(data)}
+                                    onClick={() =>
+                                      handleCopy(transformCallData(data))
+                                    }
                                   />
                                 </TableCell>
                               </TableRow>
@@ -358,10 +433,18 @@ const Transaction = () => {
                   {getTransactionByHashQuery.data?.signature?.map(
                     (signature) => (
                       <div key={signature}>
-                        <div className="flex flex-row items-center border-t-[1px] border-[#383838] py-2">
+                        <div className="flex flex-row items-center justify-between border-t-[1px] border-[#383838] py-2">
                           <p className="text-[14px] text-[#f5ab35]">
                             {signature}
                           </p>
+                          <Copy
+                            cursor={"pointer"}
+                            width={15}
+                            height={15}
+                            className="mr-4"
+                            color="gray"
+                            onClick={() => handleCopy(signature ?? "")}
+                          />
                         </div>
                       </div>
                     ),
@@ -374,38 +457,74 @@ const Transaction = () => {
         ) : (
           <>
             <div className="h-fit w-full">
-              <table className="w-full caption-bottom text-sm">
-                <thead className=" border border-x-0 border-[#4B4B4B]">
-                  <tr className="text-xs text-[#AAAAAA]">
-                    <th className="h-10 px-4 text-left align-middle font-medium  text-muted-foreground">
-                      ID
-                    </th>
-                    <th className="h-10 px-4 text-left align-middle font-medium  text-muted-foreground">
-                      BLOCK
-                    </th>
-                    <th className="h-10 px-4 text-left align-middle font-medium  text-muted-foreground">
-                      AGE
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="text-xs ">
-                  <tr className="border border-x-0 border-[#4B4B4B]">
-                    <td className="h-10 px-4  align-middle ">
-                      <span className="text-white">
-                        {getTransactionByHashQuery.data?.id}
-                      </span>
-                    </td>
-                    <td className="h-10 px-4 align-middle ">
-                      <span className="text-white">
-                        {transactionReceipt?.block_number ?? "loading ..."}
-                      </span>
-                    </td>
-                    <td className="h-10 px-4 align-middle ">
-                      <span className="text-white">bgyhjgui</span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+              <Table>
+                <TableHeader>
+                  <TableRow className="h-2.5 border-[#4B4B4B] hover:bg-white/25">
+                    <TableHead className="text-xs uppercase text-[#AAAAAA]">
+                      id
+                    </TableHead>
+                    <TableHead className="text-xs uppercase text-[#AAAAAA]">
+                      block
+                    </TableHead>
+                    <TableHead className="text-xs uppercase text-[#AAAAAA]">
+                      age
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {transactionReceipt?.events?.map((_, index) => (
+                    <TableRow
+                      key={index}
+                      className="h-2.5 border-[#4B4B4B] hover:bg-white/25"
+                    >
+                      <TableCell align="left">
+                        {/* blockNo_txnIndex_eventIndex */}
+                        <TooltipProvider>
+                          <Tooltip delayDuration={0}>
+                            <TooltipTrigger>
+                              <Link href="" className="text-[#8BA3DF]">
+                                {`${transactionReceipt?.block_number}_${getTransactionByHashQuery?.data?.id}_${index}`}
+                              </Link>
+                            </TooltipTrigger>
+                            <TooltipContent style={tooltipStyle}>
+                              <p>{`${transactionReceipt?.block_number}_${getTransactionByHashQuery?.data?.id}_${index}`}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </TableCell>
+                      <TableCell
+                        align="left"
+                        className="flex items-center gap-2"
+                      >
+                        <Link href="" className="text-[#8BA3DF]">
+                          {transactionReceipt?.block_number}
+                        </Link>
+                        <Copy
+                          cursor={"pointer"}
+                          width={15}
+                          height={15}
+                          color="gray"
+                          onClick={() =>
+                            handleCopy(transactionReceipt?.block_number ?? "")
+                          }
+                        />
+                      </TableCell>
+                      <TableCell align="left">
+                        <TooltipProvider>
+                          <Tooltip delayDuration={0}>
+                            <TooltipTrigger>
+                              <p>{convertAge(Number(age!))}</p>
+                            </TooltipTrigger>
+                            <TooltipContent style={tooltipStyle}>
+                              <p>{formatTimeStamp(Number(age))}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           </>
         )}

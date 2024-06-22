@@ -32,7 +32,7 @@ import { useCopyToClipboard } from "@uidotdev/usehooks";
 import Badge from "./Badge";
 import Link from "next/link";
 import Filter from "./Filter";
-import { tableColumns } from "~/consts";
+import { tableColumns, tooltipStyle } from "~/consts";
 import dynamic from "next/dynamic";
 
 interface TransactionTableProps {
@@ -41,12 +41,6 @@ interface TransactionTableProps {
   setFilterState: Dispatch<SetStateAction<string>>;
   fetchTransactions: () => void;
 }
-
-const tooltipStyle: CSSProperties = {
-  background: "rgb(255,255,255)",
-  color: "black",
-  padding: "5px 20px",
-};
 
 const TransactionTable = ({
   data,
@@ -200,7 +194,11 @@ const TransactionTable = ({
                       <Tooltip delayDuration={0}>
                         <TooltipTrigger>
                           <Link
-                            href={`/tx/${tx.hash}?age=${tx.age}`}
+                            href={
+                              tx.type === "INVOKE" && tx.version === "1"
+                                ? `/tx/${tx.hash}?age=${tx.age}`
+                                : ""
+                            }
                             className="flex w-24 text-[#8BA3DF]"
                           >
                             {shortenHash(tx.hash)}

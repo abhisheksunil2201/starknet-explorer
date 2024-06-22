@@ -38,6 +38,7 @@ export interface ITransactionReceipt {
       ec_op_builtin_applications: number;
       range_check_builtin_applications: number;
     };
+    events: { data: string[]; from_address: string; keys: string[] }[];
   };
 }
 

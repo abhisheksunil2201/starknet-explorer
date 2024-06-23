@@ -195,7 +195,7 @@ const TransactionTable = ({
                         <TooltipTrigger>
                           <Link
                             href={
-                              tx.type === "INVOKE" && tx.version === "1"
+                              tx.type === "INVOKE" && tx.version === "0x1"
                                 ? `/tx/${tx.hash}?age=${tx.age}`
                                 : ""
                             }
